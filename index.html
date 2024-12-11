@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message NFT</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.6.0/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Message NFT</h1>
+
+    <label for="textInput">Enter your message:</label>
+    <input type="text" id="textInput" placeholder="Enter your message here" style="width: 300px;">
+    <br><br>
+    <label for="recipientAddress">Recipient Address:</label>
+    <input type="text" id="recipientAddress" placeholder="Enter recipient address" style="width: 300px;">
+    <br><br>
+    <button id="mintNFT">Send NFT</button>
+    <br><br>
+    <div id="results"></div>
+
+    <script>
+        const CONTRACT_ADDRESS = "0xa084D18275332C2F307Dd4D37D9018933b8f8EFf"; // Replace with your contract address
+        const CONTRACT_ABI = [
+            {
+                "inputs": [
+                    { "internalType": "address", "name": "to", "type": "address" },
+                    { "internalType": "string", "name": "uri", "type": "string" }
+                ],
+                "name": "safeMint",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+
+        const pinataApiKey = "c0ebde9856706be7776a";
+        const pinataSecretApiKey = "cfe13fb5640ba687cac11c4f5f021aca2f35963496a1484e2ccc038ba789003b";
+
+        let imageCid = ""; // Global variable for Image CID
+        let metadataCid = ""; // Global variable for Metadata CID
+
+        async function uploadToIPFS(file) {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const response = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
+                    headers: {
+                        "Content-Type": `multipart/form-data; boundary=${formData._boundary}`,
+                        pinata_api_key: pinataApiKey,
+                        pinata_secret_api_key: pinataSecretApiKey,
+                    }
+                });
+                return response.data.IpfsHash; // Return the image CID
+            } catch (error) {
+                console.error("Error uploading to IPFS:", error);
+                document.getElementById("results").innerText = `Error uploading image to IPFS!`
+                document.getElementById("results").style.color = "red"
+            }
+        }
+
+        async function uploadMetadataToIPFS(imageCid) {
+            const metadata = {
+                name: "Message NFT",
+                description: "A message NFT",
+                image: `https://gateway.pinata.cloud/ipfs/${imageCid}`,
+                attributes: [
+                    {
+                        trait_type: "Rarity",
+                        value: "Common"
+                    }
+                ]
+            };
+
+            const formData = new FormData();
+            formData.append("file", new Blob([JSON.stringify(metadata)], { type: 'application/json' }), "metadata.json");
+
+            try {
+                const response = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
+                    headers: {
+                        "Content-Type": `multipart/form-data; boundary=${formData._boundary}`,
+                        pinata_api_key: pinataApiKey,
+                        pinata_secret_api_key: pinataSecretApiKey,
+                    }
+                });
+
+                return response.data.IpfsHash; // Return metadata CID
+            } catch (error) {
+                console.error("Error uploading metadata to IPFS:", error);
+                document.getElementById("results").innerText = `Error uploading metadata to IPFS!`
+                document.getElementById("results").style.color = "red"
+            }
+        }
+
+        async function mintNFT() {
+            document.getElementById("results").innerText = `Working...`
+            document.getElementById("results").style.color = "green"
+            const textInput = document.getElementById("textInput").value.trim();
+            if (!textInput) {
+                document.getElementById("results").innerText = `Please enter a message.`
+                document.getElementById("results").style.color = "red"
+                return;
+            }
+
+            // Create a canvas and draw the image and text
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            const image = new Image();
+            image.src = 'post-it.png'; // Replace with your image path
+            image.onload = async function() {
+                canvas.width = image.width;
+                canvas.height = image.height;
+                context.drawImage(image, 0, 0);
+
+                // Set the text properties
+                context.font = '30px Arial';
+                context.fillStyle = 'black';
+                context.textAlign = 'center';
+
+                // Add the text to the image
+                context.fillText(textInput, canvas.width / 2, canvas.height / 2);
+
+                // Convert the canvas to a blob
+                canvas.toBlob(async function(blob) {
+                    // Upload the image to IPFS
+                    imageCid = await uploadToIPFS(blob);
+
+                    // Upload metadata to IPFS
+                    metadataCid = await uploadMetadataToIPFS(imageCid);
+
+                    if (!imageCid || !metadataCid) {
+                        document.getElementById("results").innerText = `Image CID or Metadata CID is missing. Image and metadata upload failed.`
+                        document.getElementById("results").style.color = "red"
+                        return;
+                    }
+
+                    const recipientAddress = document.getElementById("recipientAddress").value.trim();
+                    if (!ethers.utils.isAddress(recipientAddress)) {
+                        document.getElementById("results").innerText = `Please enter a valid Ethereum address.`
+                        document.getElementById("results").style.color = "red"
+                        return;
+                    }
+
+                    if (typeof window.ethereum === "undefined") {
+                        document.getElementById("results").innerText = `Ethereum-compatible wallet is not installed!`
+                        document.getElementById("results").style.color = "red"
+                        return;
+                    }
+
+                    try {
+                        // Request wallet connection
+                        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+                        const connectedAddress = accounts[0];
+                        console.log("Connected wallet address:", connectedAddress);
+
+                        // Initialize provider and signer
+                        const provider = new ethers.providers.Web3Provider(window.ethereum);
+                        const signer = provider.getSigner();
+
+                        // Retrieve signer address
+                        const signerAddress = await signer.getAddress();
+                        console.log("Signer address:", signerAddress);
+
+                        // Log mismatch for debugging but proceed to use connectedAddress
+                        if (connectedAddress.toLowerCase() !== signerAddress.toLowerCase()) {
+                            console.warn("Signer address does not match the connected wallet address. Using the connected address instead.");
+                        }
+
+                        // Create contract instance
+                        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+                        // Call the safeMint function
+                        const tx = await contract.safeMint(recipientAddress, `ipfs://${metadataCid}`);
+                        await tx.wait();
+
+                        document.getElementById("results").innerText = `NFT minted successfully to ${recipientAddress}`;
+                        document.getElementById("results").style.color = "green"
+                    } catch (error) {
+                        console.error("Error minting NFT:", error);
+                        document.getElementById("results").innerText = `Failed to mint NFT. Check the console for more details.`;
+                        document.getElementById("results").style.color = "red"
+                    }
+                }, 'image/png');
+            };
+        }
+
+        async function deleteOldFiles() {
+            try {
+                // Get the list of pinned files
+                const response = await axios.get('https://api.pinata.cloud/data/pinList', {
+                    headers: {
+                        pinata_api_key: pinataApiKey,
+                        pinata_secret_api_key: pinataSecretApiKey,
+                    }
+                });
+
+                const pins = response.data.rows;
+                const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+                for (const pin of pins) {
+                    const pinDate = new Date(pin.date_pinned);
+                    if (pinDate < fiveMinutesAgo) {
+                        // Unpin the file
+                        await axios.delete(`https://api.pinata.cloud/pinning/unpin/${pin.ipfs_pin_hash}`, {
+                            headers: {
+                                pinata_api_key: pinataApiKey,
+                                pinata_secret_api_key: pinataSecretApiKey,
+                            }
+                        });
+                        console.log(`Unpinned file: ${pin.ipfs_pin_hash}`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error deleting old files:', error);
+            }
+        }
+
+        document.getElementById("mintNFT").onclick = mintNFT;
+
+        // Call deleteOldFiles when the page loads
+        window.onload = deleteOldFiles;
+    </script>
+</body>
+</html>
