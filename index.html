@@ -35,9 +35,6 @@
             }
         ];
 
-        const pinataApiKey = "c0ebde9856706be7776a";
-        const pinataSecretApiKey = "cfe13fb5640ba687cac11c4f5f021aca2f35963496a1484e2ccc038ba789003b";
-
         let imageCid = ""; // Global variable for Image CID
         let metadataCid = ""; // Global variable for Metadata CID
 
@@ -49,8 +46,8 @@
                 const response = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
                     headers: {
                         "Content-Type": `multipart/form-data; boundary=${formData._boundary}`,
-                        pinata_api_key: pinataApiKey,
-                        pinata_secret_api_key: pinataSecretApiKey,
+                        pinata_api_key: process.env.PINATA_API_KEY,
+                        pinata_secret_api_key: process.env.PINATA_SECRET_API_KEY,
                     }
                 });
                 return response.data.IpfsHash; // Return the image CID
@@ -81,8 +78,8 @@
                 const response = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
                     headers: {
                         "Content-Type": `multipart/form-data; boundary=${formData._boundary}`,
-                        pinata_api_key: pinataApiKey,
-                        pinata_secret_api_key: pinataSecretApiKey,
+                        pinata_api_key: process.env.PINATA_API_KEY,
+                        pinata_secret_api_key: process.env.PINATA_SECRET_API_KEY,
                     }
                 });
 
@@ -191,8 +188,8 @@
                 // Get the list of pinned files
                 const response = await axios.get('https://api.pinata.cloud/data/pinList', {
                     headers: {
-                        pinata_api_key: pinataApiKey,
-                        pinata_secret_api_key: pinataSecretApiKey,
+                        pinata_api_key: process.env.PINATA_API_KEY,
+                        pinata_secret_api_key: process.env.PINATA_SECRET_API_KEY,
                     }
                 });
 
@@ -205,8 +202,8 @@
                         // Unpin the file
                         await axios.delete(`https://api.pinata.cloud/pinning/unpin/${pin.ipfs_pin_hash}`, {
                             headers: {
-                                pinata_api_key: pinataApiKey,
-                                pinata_secret_api_key: pinataSecretApiKey,
+                                pinata_api_key: process.env.PINATA_API_KEY,
+                                pinata_secret_api_key: process.env.PINATA_SECRET_API_KEY,
                             }
                         });
                         console.log(`Unpinned file: ${pin.ipfs_pin_hash}`);
