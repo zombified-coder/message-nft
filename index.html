@@ -96,12 +96,12 @@
         }
 
         async function mintNFT() {
-            document.getElementById("results").innerText = `Working...`
-            document.getElementById("results").style.color = "green"
+            document.getElementById("results").innerText = `Working...`;
+            document.getElementById("results").style.color = "green";
             const textInput = document.getElementById("textInput").value.trim();
             if (!textInput) {
-                document.getElementById("results").innerText = `Please enter a message.`
-                document.getElementById("results").style.color = "red"
+                document.getElementById("results").innerText = `Please enter a message.`;
+                document.getElementById("results").style.color = "red";
                 return;
             }
 
@@ -117,36 +117,64 @@
 
                 // Set the text properties
                 context.font = '30px Arial';
-                context.fillStyle = 'black';
+                context.fillStyle = 'green';
                 context.textAlign = 'center';
 
-                // Add the text to the image
-                context.fillText(textInput, canvas.width / 2, canvas.height / 2);
+                // Define the text area bounds
+                const maxWidth = canvas.width - 40; // Adjust as needed
+                const lineHeight = 40; // Adjust as needed
+                const x = canvas.width / 2;
+                const y = canvas.height / 2;
+
+                // Function to wrap text
+                function wrapText(context, text, x, y, maxWidth, lineHeight) {
+                    const words = text.split(' ');
+                    let line = '';
+                    let testLine = '';
+                    let testWidth = 0;
+                    let lineCount = 0;
+
+                    for (let n = 0; n < words.length; n++) {
+                        testLine = line + words[n] + ' ';
+                        testWidth = context.measureText(testLine).width;
+                        if (testWidth > maxWidth && n > 0) {
+                            context.fillText(line, x, y + (lineCount * lineHeight));
+                            line = words[n] + ' ';
+                            lineCount++;
+                        } else {
+                            line = testLine;
+                        }
+                    }
+                    context.fillText(line, x, y + (lineCount * lineHeight));
+                }
+
+                // Add the wrapped text to the image
+                wrapText(context, textInput, x, y, maxWidth, lineHeight);
 
                 // Convert the canvas to a blob
                 canvas.toBlob(async function(blob) {
                     // Upload the image to IPFS
-                    imageCid = await uploadToIPFS(blob);
+                    const imageCid = await uploadToIPFS(blob);
 
                     // Upload metadata to IPFS
-                    metadataCid = await uploadMetadataToIPFS(imageCid);
+                    const metadataCid = await uploadMetadataToIPFS(imageCid);
 
                     if (!imageCid || !metadataCid) {
-                        document.getElementById("results").innerText = `Image CID or Metadata CID is missing. Image and metadata upload failed.`
-                        document.getElementById("results").style.color = "red"
+                        document.getElementById("results").innerText = `Image CID or Metadata CID is missing. Image and metadata upload failed.`;
+                        document.getElementById("results").style.color = "red";
                         return;
                     }
 
                     const recipientAddress = document.getElementById("recipientAddress").value.trim();
                     if (!ethers.utils.isAddress(recipientAddress)) {
-                        document.getElementById("results").innerText = `Please enter a valid Ethereum address.`
-                        document.getElementById("results").style.color = "red"
+                        document.getElementById("results").innerText = `Please enter a valid Ethereum address.`;
+                        document.getElementById("results").style.color = "red";
                         return;
                     }
 
                     if (typeof window.ethereum === "undefined") {
-                        document.getElementById("results").innerText = `Ethereum-compatible wallet is not installed!`
-                        document.getElementById("results").style.color = "red"
+                        document.getElementById("results").innerText = `Ethereum-compatible wallet is not installed!`;
+                        document.getElementById("results").style.color = "red";
                         return;
                     }
 
@@ -177,11 +205,11 @@
                         await tx.wait();
 
                         document.getElementById("results").innerText = `NFT minted successfully to ${recipientAddress}`;
-                        document.getElementById("results").style.color = "green"
+                        document.getElementById("results").style.color = "green";
                     } catch (error) {
                         console.error("Error minting NFT:", error);
                         document.getElementById("results").innerText = `Failed to mint NFT. Check the console for more details.`;
-                        document.getElementById("results").style.color = "red"
+                        document.getElementById("results").style.color = "red";
                     }
                 }, 'image/png');
             };
