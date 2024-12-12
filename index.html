@@ -110,54 +110,55 @@
             const context = canvas.getContext('2d');
             const image = new Image();
             image.src = 'post-it.png'; // Replace with your image path
-            image.onload = async function() {
+            image.onload = async function () {
                 canvas.width = image.width;
                 canvas.height = image.height;
                 context.drawImage(image, 0, 0);
 
-                // Set the text properties
+                // Set text properties
                 context.font = '30px Arial';
                 context.fillStyle = 'green';
                 context.textAlign = 'center';
-
-                // Define the text area bounds
-                const maxWidth = canvas.width - 40; // Adjust as needed
-                const lineHeight = 40; // Adjust as needed
-                const x = canvas.width / 2;
-                const y = canvas.height / 2;
 
                 // Function to wrap text
                 function wrapText(context, text, x, y, maxWidth, lineHeight) {
                     const words = text.split(' ');
                     let line = '';
-                    let testLine = '';
-                    let testWidth = 0;
-                    let lineCount = 0;
+                    let lines = [];
 
-                    for (let n = 0; n < words.length; n++) {
-                        testLine = line + words[n] + ' ';
-                        testWidth = context.measureText(testLine).width;
-                        if (testWidth > maxWidth && n > 0) {
-                            context.fillText(line, x, y + (lineCount * lineHeight));
-                            line = words[n] + ' ';
-                            lineCount++;
+                    for (let i = 0; i < words.length; i++) {
+                        const testLine = line + words[i] + ' ';
+                        const metrics = context.measureText(testLine);
+                        const testWidth = metrics.width;
+
+                        if (testWidth > maxWidth && i > 0) {
+                            lines.push(line.trim());
+                            line = words[i] + ' ';
                         } else {
                             line = testLine;
                         }
                     }
-                    context.fillText(line, x, y + (lineCount * lineHeight));
+                    lines.push(line.trim());
+
+                    for (let i = 0; i < lines.length; i++) {
+                        context.fillText(lines[i], x, y + i * lineHeight);
+                    }
                 }
 
-                // Add the wrapped text to the image
+                // Call wrapText to add the text to the image
+                const maxWidth = canvas.width - 40; // Adjust the width as needed
+                const lineHeight = 40; // Adjust the line height as needed
+                const x = canvas.width / 2; // Center horizontally
+                const y = canvas.height / 2 - ((textInput.split(' ').length / 2) * lineHeight); // Adjust vertical position
                 wrapText(context, textInput, x, y, maxWidth, lineHeight);
 
                 // Convert the canvas to a blob
-                canvas.toBlob(async function(blob) {
+                canvas.toBlob(async function (blob) {
                     // Upload the image to IPFS
-                    const imageCid = await uploadToIPFS(blob);
+                    imageCid = await uploadToIPFS(blob);
 
                     // Upload metadata to IPFS
-                    const metadataCid = await uploadMetadataToIPFS(imageCid);
+                    metadataCid = await uploadMetadataToIPFS(imageCid);
 
                     if (!imageCid || !metadataCid) {
                         document.getElementById("results").innerText = `Image CID or Metadata CID is missing. Image and metadata upload failed.`;
