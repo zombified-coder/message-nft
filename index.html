@@ -8,17 +8,17 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
-    <div style="text-align: left; width: 300px; margin: auto;">
+    <div style="text-align: left; width: 500px; margin: auto;">
         <h1>Message NFT</h1>
+        <div id="results"></div>
+        <br><br>
         <label for="recipientAddress">Recipient Address:</label>
         <input type="text" id="recipientAddress" style="width: 100%;">
         <br><br>
         <label for="textInput">Message:</label>
-        <textarea id="textInput" style="width: 100%; height: 100px;"></textarea>
+        <textarea id="textInput" placeholder="40 words max" style="width: 100%; height: 100px;"></textarea>
         <br><br>
         <button id="mintNFT" style="width: 100%;">Send NFT</button>
-        <br><br>
-        <div id="results"></div>
     </div>
 
     <script>
@@ -150,7 +150,7 @@
                 }
 
                 // Call wrapText to add the text to the image
-                const maxWidth = canvas.width - 50; // Adjust the width as needed
+                const maxWidth = canvas.width - 60; // Adjust the width as needed
                 const lineHeight = 40; // Adjust the line height as needed
                 const x = canvas.width / 2; // Center horizontally
                 const y = canvas.height / 2; // Center vertically
@@ -252,7 +252,20 @@
             }
         }
 
-        document.getElementById("mintNFT").onclick = mintNFT;
+        document.getElementById("mintNFT").addEventListener("click", async () => {
+            const textInput = document.getElementById("textInput").value.trim();
+
+            // Split the input text into words and check the count
+            const wordCount = textInput.split(/\s+/).filter(word => word).length;
+            if (wordCount > 40) {
+                document.getElementById("results").innerText = `Message exceeds the 50-word limit. Please shorten your message.`;
+                document.getElementById("results").style.color = "red";
+                return;
+            }
+
+            // Call mintNFT function if the word count is valid
+            mintNFT();
+        });
 
         // Call deleteOldFiles when the page loads
         window.onload = deleteOldFiles;
