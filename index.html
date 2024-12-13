@@ -6,9 +6,25 @@
     <title>Message NFT</title>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.6.0/dist/ethers.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            background-color: #477f00;
+            color: white;
+            font-family: Calibri, sans-serif;
+            background-image: url('pepe.png');
+            background-position: left bottom;
+            background-repeat: no-repeat;
+            background-size: 25%;
+            height: 100vh; /* Ensure the body takes the full height of the viewport */
+            margin: 0; /* Remove default margin */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* Align content to the bottom */
+        }
+    </style>
 </head>
-<body>
-    <div style="text-align: left; width: 75%; margin: auto;">
+<body id="body">
+    <div style="text-align: left; width: 75%; margin: auto; font-family: Calibri, sans-serif;">
         <h1>Message NFT</h1>
         <div id="results"></div>
         <br><br>
@@ -18,7 +34,7 @@
         <label for="textInput">Message:</label>
         <textarea id="textInput" placeholder="40 words max" style="width: 100%; height: 100px;"></textarea>
         <br><br>
-        <button id="mintNFT" style="width: 100%;">Send NFT</button>
+        <button id="mintNFT" style="width: 150px; height: 50px; background-color: #3e6014; color: white; display: block; margin: 0 auto; border-radius: 10px;">Send NFT</button>
     </div>
 
     <script>
@@ -97,7 +113,7 @@
 
         async function mintNFT() {
             document.getElementById("results").innerText = `Working...`;
-            document.getElementById("results").style.color = "green";
+            document.getElementById("results").style.color = "white";
             const textInput = document.getElementById("textInput").value.trim();
             if (!textInput) {
                 document.getElementById("results").innerText = `Please enter a message.`;
@@ -109,7 +125,7 @@
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             const image = new Image();
-            image.src = 'post-it.png'; // Replace with your image path
+            image.src = 'message_nft_template.png'; // Replace with your image path
             image.onload = async function () {
                 canvas.width = image.width;
                 canvas.height = image.height;
@@ -172,13 +188,13 @@
 
                     const recipientAddress = document.getElementById("recipientAddress").value.trim();
                     if (!ethers.utils.isAddress(recipientAddress)) {
-                        document.getElementById("results").innerText = `Please enter a valid Ethereum address.`;
+                        document.getElementById("results").innerText = `Please enter a valid Base ETH address.`;
                         document.getElementById("results").style.color = "red";
                         return;
                     }
 
                     if (typeof window.ethereum === "undefined") {
-                        document.getElementById("results").innerText = `Ethereum-compatible wallet is not installed!`;
+                        document.getElementById("results").innerText = `Base ETH-compatible wallet is not installed!`;
                         document.getElementById("results").style.color = "red";
                         return;
                     }
@@ -192,6 +208,14 @@
                         // Initialize provider and signer
                         const provider = new ethers.providers.Web3Provider(window.ethereum);
                         const signer = provider.getSigner();
+
+                        // Check if the user is connected to the correct network
+                        const network = await provider.getNetwork();
+                        if (network.chainId !== 84532) { // Base Sepolia testnet chain ID 8453 for mainnet
+                            document.getElementById("results").innerText = `Please connect to the Base Sepolia testnet.`;
+                            document.getElementById("results").style.color = "red";
+                            return;
+                        }
 
                         // Retrieve signer address
                         const signerAddress = await signer.getAddress();
@@ -210,7 +234,7 @@
                         await tx.wait();
 
                         document.getElementById("results").innerText = `NFT minted successfully to ${recipientAddress}`;
-                        document.getElementById("results").style.color = "green";
+                        document.getElementById("results").style.color = "white";
                     } catch (error) {
                         console.error("Error minting NFT:", error);
                         document.getElementById("results").innerText = `Failed to mint NFT. Check the console for more details.`;
